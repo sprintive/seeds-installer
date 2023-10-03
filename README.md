@@ -13,6 +13,9 @@ seeds-installer focusing on Arabic website with RTL interfaces so if you have an
 2. If you have zsh on your device:
 in your terminal go write `vim ~/.zshrc`, then add in the last line this code
 ````export COMPOSER_BIN="$HOME/.config/composer/bin"````
+if you have bashrc on your device
+in your terminal go write `vim ~/.bashrc`, then add in the last line this code
+````export COMPOSER_BIN="$HOME/.config/composer/bin"````
 
 
 #### Sponsored and developed by:

@@ -10,7 +10,7 @@
     "symfony/console": "^6.2"
   },
   "bin": [
-    "bin/installer"
+    "bin/seeds"
   ],
   "authors": [
     {
