@@ -1,0 +1,27 @@
+{
+  "name": "sprintive/seeds-installer",
+  "description": "Install project with all required steps",
+  "license": "GPL-2.0-or-later",
+  "prefer-stable": true,
+  "type": "library",
+  "minimum-stability": "dev",
+  "require": {
+    "php": ">=8.2.0",
+    "symfony/console": "^6.2"
+  },
+  "bin": [
+    "bin/installer"
+  ],
+  "authors": [
+    {
+      "name": "Sprintive",
+      "homepage": "http://sprintive.com",
+      "role": "Supporting Organization"
+    },
+    {
+      "name": "Mohammad Abdul-Qader",
+      "homepage": "https://www.drupal.org/u/mabdulqader",
+      "role": "Maintainer"
+    }
+  ]
+}
