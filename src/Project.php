@@ -234,28 +234,28 @@ class Project extends Command
         $this->output->writeln('Create Local Settings File!');
         $local_settings = "
         <?php
-            \$databases['default']['default'] = [
-                'database' => '{$this->projectInfo['project_name']}',
-                'username' => 'root',
-                'password' => 'root',
-                'prefix' => '',
-                'host' => 'localhost',
-                'port' => '3306',
-                'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
-                'driver' => 'mysql',
-            ];
+        \$databases['default']['default'] = [
+            'database' => '{$this->projectInfo['name']}',
+            'username' => 'root',
+            'password' => 'root',
+            'prefix' => '',
+            'host' => 'localhost',
+            'port' => '3306',
+            'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
+            'driver' => 'mysql',
+        ];
 
 
-            \$config['system.performance']['css']['preprocess'] = false;
-            \$config['system.performance']['js']['preprocess'] = false;
-            \$settings['config_sync_directory'] = 'sites/default/config';
+        \$config['system.performance']['css']['preprocess'] = false;
+        \$config['system.performance']['js']['preprocess'] = false;
+        \$settings['config_sync_directory'] = 'sites/default/config';
 
-            // Temp file path.
-            \$settings['file_temp_path'] = 'sites/default/files/tmp';
+        // Temp file path.
+        \$settings['file_temp_path'] = 'sites/default/files/tmp';
 
-            // Private files path.
-            \$settings['file_private_path'] = 'sites/default/files/private';
-            ";
+        // Private files path.
+        \$settings['file_private_path'] = 'sites/default/files/private';
+        ";
         $localSettingsFile = fopen("$projectPath/public_html/sites/default/local.settings.inc", "w");
         if ($localSettingsFile) {
             fwrite($localSettingsFile, $local_settings);
