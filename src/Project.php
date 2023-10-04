@@ -2,100 +2,159 @@
 
 namespace Sprintive;
 
+use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Cursor;
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Helper\ProgressIndicator;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Process\Process;
 
 /**
  *
  */
-class Project {
+class Project extends Command
+{
+    /**
+     * Command Output
+     *
+     * @var OutputInterface $output;
+     */
+    private OutputInterface $output;
+    /**
+     * Project info
+     *
+     * @var Array<string, string> $projectInfo;
+     */
+    private array $projectInfo = [];
 
-  protected InputInterface $input;
+    /**
+     * Github repo path
+     *
+     * @var string $githubRepo
+     */
+    private string $githubRepo = "git@github.com:sprintive/{project_name}.git";
 
-  protected OutputInterface $output;
 
-  protected string $github_repo = "git@github.com:{org}/{project_name}.git";
-
-  protected array $projectInfo = [];
-
-  protected string $org = "";
-
-  /**
-   *
-   */
-  public function __construct(InputInterface $input, OutputInterface $output) {
-    $this->input = $input;
-    $this->output = $output;
-    $this->org = $this->input->getOption('org');
-    $this->projectInfo = [
-      'project_name' => $this->input->getOption('project_name'),
-      'db_name' => str_replace("-", "_", $this->input->getOption('project_name')),
-      'project_path' => "/var/www/html/" . $this->input->getOption('project_name'),
-    ];
-    $this->prepareFolder();
-    $this->cloneProject();
-    $this->prepareVirtualHost();
-    $this->restartApache();
-    $this->createDatabase();
-    $this->createLocalSettingsFile();
-  }
-
-  /**
-   * Prepare projectFolder.
-   */
-  public function prepareFolder() {
-    try {
-      $this->output->writeln('Prepare Folder!');
-
-      // Create the project folder.
-      if (!is_dir($this->projectInfo['project_path'])) {
-        mkdir($this->projectInfo['project_path'], 0777, TRUE);
-        $this->output->writeln('Project folder created');
-      }
-      else {
-        $this->output->writeln('Project already exists!');
-      }
-      // Change the directory.
-      chdir($this->projectInfo['project_path']);
-      $this->output->writeln("Change directory to {$this->projectInfo['project_path']}");
-      return TRUE;
+    /**
+     * Configure the command options.
+     *
+     * @return void
+     */
+    protected function configure()
+    {
+        $this
+            ->setName('new')
+            ->setDescription('Clone project from sprintive github')
+            ->addArgument('name', InputArgument::REQUIRED);
     }
-    catch (\Throwable $th) {
-      $this->output->writeln($th->getMessage());
-      return FALSE;
-    }
-  }
+    /**
+     * Interact with the user before validating the input.
+     *
+     * @param  \Symfony\Component\Console\Input\InputInterface   $input
+     * @param  \Symfony\Component\Console\Output\OutputInterface $output
+     * @return void
+     */
+    protected function interact(InputInterface $input, OutputInterface $output)
+    {
+        parent::interact($input, $output);
 
-  /**
-   *
-   */
-  public function cloneProject() {
-    try {
-      $this->output->writeln('Starting clone!');
-      // Clone the project.
-      $github_repo = str_replace("{project_name}", $this->projectInfo['project_name'], $this->github_repo);
-      $github_repo = str_replace("{org}", $this->org, $github_repo);
+        $this->output = $output;
+        $output->write(
+            PHP_EOL.'<fg=red> Sprintive project installer</>'.PHP_EOL.PHP_EOL
+        );
 
-      $this->output->writeln($github_repo);
-      exec("git clone $github_repo .");
-      return TRUE;
-    }
-    catch (\Throwable $th) {
-      $this->output->writeln($th->getMessage());
-      return FALSE;
-    }
-  }
+        if (! $input->getArgument('name')) {
+            $input->setArgument('name', InputArgument::REQUIRED, 'Provide a name for the project');
+        }
+        $output->write(PHP_EOL. '<fg=red>Start initialize project : ' . $input->getArgument('name') . '</>'.PHP_EOL.PHP_EOL);
 
-  /**
-   *
-   */
-  public function prepareVirtualHost() {
-    try {
-      $this->output->writeln('Prepare Virtual Host!');
-      $project = '
+
+    }
+
+    /**
+     * Execute the command.
+     *
+     * @param  \Symfony\Component\Console\Input\InputInterface   $input
+     * @param  \Symfony\Component\Console\Output\OutputInterface $output
+     * @return int
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        $this->projectInfo = [
+        'name' => $input->getArgument('name'),
+        'db_name' => str_replace("-", "_", $input->getArgument('name')),
+        'project_path' => "/var/www/html/" . $input->getArgument('name'),
+        ];
+        $this->prepareFolder();
+        $this->cloneProject();
+        $this->prepareVirtualHost();
+        $this->restartApache();
+        $this->createDatabase();
+        $this->createLocalSettingsFile();
+
+        return Command::SUCCESS;
+
+    }
+
+
+    /**
+     * Prepare projectFolder.
+     */
+    private function prepareFolder()
+    {
+        if (!is_dir($this->projectInfo['project_path'])) {
+            if (mkdir($this->projectInfo['project_path'], 0777, true)) {
+                $this->output->writeln('<info>Project folder created</info>');
+            } else {
+                $this->output->writeln('<fg=red>Failed to create folder</>');
+            }
+        } else {
+            $this->output->writeln('<comment>Project already exists!</comment>');
+        }
+
+        if (chdir($this->projectInfo['project_path'])) {
+            $this->output->writeln("<info>Change directory to {$this->projectInfo['project_path']}</info>");
+        } else {
+            $this->output->writeln("<fg=red>Failed to change directory</>");
+        }
+    }
+
+    /**
+     * Clone project
+     */
+    private function cloneProject()
+    {
+        $this->output->writeln('<info>Starting clone!</info>');
+        $githubRepo = str_replace("{project_name}", $this->projectInfo['name'], $this->githubRepo);
+
+        $progressIndicator = new ProgressIndicator($this->output, 'verbose', 100, ['⠏', '⠛', '⠹', '⢸', '⣰', '⣤', '⣆', '⡇']);
+        $progressIndicator->start('Processing...');
+
+        $i = 0;
+        while ($i++ < 100) {
+            $cloneProject = exec("git clone $githubRepo .");
+            if ($cloneProject) {
+                $progressIndicator->advance();
+                $this->output->writeln('<fg=red>Failed to clone project</>');
+            } else {
+                break;
+            }
+        }
+
+        $progressIndicator->finish('Finished');
+    }
+
+    /**
+     * Prepare virtual host
+     */
+    private function prepareVirtualHost()
+    {
+            $project = '
                 <VirtualHost *:80>
-                    ServerName ' . $this->projectInfo['project_name'] . '.local
+                    ServerName ' . $this->projectInfo['name'] . '.local
                     DocumentRoot ' . $this->projectInfo['project_path'] . '/public_html/
                     <Directory ' . $this->projectInfo['project_path'] . '/public_html/>
                         AllowOverride All
@@ -107,127 +166,82 @@ class Project {
                     CustomLog /var/log/apache2/access.log combined
                 </VirtualHost>
             ';
-      $host = '
-            127.0.0.1 ' . $this->projectInfo['project_name'] . '.local
+            $host = '
+            127.0.0.1 ' . $this->projectInfo['name'] . '.local
         ';
-      // Create the virtual host
-      // check if there is configuration for project inside virtual host file.
-      exec("sudo chmod -R 777 /etc/apache2/sites-available/000-default.conf");
-      $virtual_host = file_get_contents("/etc/apache2/sites-available/000-default.conf");
-      if (strpos($virtual_host, $this->projectInfo['project_name']) !== FALSE) {
-        $this->output->writeln('Project already exists!');
-      }
-      else {
-        $virtualHostFile = fopen("/etc/apache2/sites-available/000-default.conf", 'a');
-        if (!$virtualHostFile) {
-          return COMMAND::FAILURE;
+        $this->output->writeln('Prepare Virtual Host!');
+
+        exec("sudo chmod -R 777 /etc/apache2/sites-available/000-default.conf");
+        $virtualHost = file_get_contents("/etc/apache2/sites-available/000-default.conf");
+
+        if (strpos($virtualHost, $this->projectInfo['name']) === false) {
+            $virtualHostFile = fopen("/etc/apache2/sites-available/000-default.conf", 'a');
+            if ($virtualHostFile) {
+                fwrite($virtualHostFile, $project);
+                fclose($virtualHostFile);
+                exec("sudo chmod -R 755 /etc/apache2/sites-available/000-default.conf");
+            }
         }
-        fwrite($virtualHostFile, $project);
-        fclose($virtualHostFile);
-        exec("sudo chmod -R 755 /etc/apache2/sites-available/000-default.conf");
-      }
-      $this->output->writeln('Project Virtual Host Created Successfully!');
 
-      $this->output->writeln("Add virtual host to hosts");
-      exec("sudo chmod -R 777 /etc/hosts");
-      $hosts = file_get_contents("/etc/hosts");
-      if (strpos($virtual_host, $this->projectInfo['project_name']) !== FALSE) {
-        $this->output->writeln('Project already exists!');
-      }
-      else {
-        $hostsFile = fopen("/etc/hosts", 'a');
-        if (!$virtualHostFile) {
-          return COMMAND::FAILURE;
+        // Add virtual host to hosts file
+        exec("sudo chmod -R 777 /etc/hosts");
+        $hosts = file_get_contents("/etc/hosts");
+
+        if (strpos($hosts, $this->projectInfo['name']) === false) {
+            $hostsFile = fopen("/etc/hosts", 'a');
+            if ($hostsFile) {
+                fwrite($hostsFile, $host);
+                fclose($hostsFile);
+                exec("sudo chmod -R 755 /etc/apache2/sites-available/000-default.conf");
+            }
         }
-        fwrite($hostsFile, $host);
-        fclose($hostsFile);
-        exec("sudo chmod -R 755 /etc/apache2/sites-available/000-default.conf");
-        $this->output->writeln('Project host name Created Successfully!');
-      }
-      return TRUE;
-    }
-    catch (\Throwable $th) {
-      $this->output->writeln($th->getMessage());
-      return FALSE;
-    }
-  }
 
-  /**
-   *
-   */
-  public function restartApache() {
-    try {
-      $this->output->writeln('Restart Apache!');
-      exec("service apache2 restart");
-      return TRUE;
+        $this->output->writeln('Project Virtual Host and host name created successfully!');
     }
-    catch (\Throwable $th) {
-      $this->output->writeln($th->getMessage());
-      return TRUE;
-    }
-  }
 
-  /**
-   *
-   */
-  public function createDatabase() {
-    try {
-      $this->output->writeln('Create Database!');
-      // Create the database
-      // check if there is database with the same name.
-      $result = "";
-      $output = "";
-      $test = exec("mysql -u root -proot -e 'CREATE DATABASE {$this->projectInfo['db_name']};'", $output, $result);
-      if ($result == 0) {
-        $this->output->writeln('Database Created Successfully!');
-      }
-      else {
-        $this->output->writeln('Database Already Exists!');
-      }
-      return TRUE;
+    /**
+     * Restart apache
+     */
+    private function restartApache()
+    {
+        $this->output->writeln('Restart Apache!');
+        exec("service apache2 restart");
     }
-    catch (\Throwable $th) {
-      $this->output->writeln($th->getMessage());
-      return FALSE;
-    }
-  }
 
-  /**
-   *
-   */
-  public function createLocalSettingsFile() {
-    try {
-      $projectPath = $this->projectInfo['project_path'];
-      $this->output->writeln('Create Local Settings File!');
-      // Create the local settings file.
-      $local_settings = "
-        <?php
-            \$databases['default']['default'] = [
-                'database' => '{$this->projectInfo['project_name']}',
-                'username' => 'root',
-                'password' => 'root',
-                'prefix' => '',
-                'host' => 'localhost',
-                'port' => '3306',
-                'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
-                'driver' => 'mysql',
-            ];
+    /**
+     * Create database
+     */
+    private function createDatabase()
+    {
+        $this->output->writeln('Create Database!');
+        $result = "";
+        $output = "";
+        $test = exec("mysql -u root -proot -e 'CREATE DATABASE {$this->projectInfo['db_name']};'", $output, $result);
 
+        if ($result == 0) {
+            $this->output->writeln('Database Created Successfully!');
+        } else {
+            $this->output->writeln('Database Already Exists!');
+        }
+    }
 
-            \$config['system.performance']['css']['preprocess'] = false;
-            \$config['system.performance']['js']['preprocess'] = false;
-        ";
-      // Create file inside default project folder.
-      $local_settings_file = fopen("$projectPath/public_html/sites/default/local.settings.inc", "w");
-      fwrite($local_settings_file, $local_settings);
-      fclose($local_settings_file);
-      $this->output->writeln('Local Settings File Created Successfully!');
-      return TRUE;
+    /**
+     * Create local settings file
+     */
+    private function createLocalSettingsFile()
+    {
+        $projectPath = $this->projectInfo['project_path'];
+        $this->output->writeln('Create Local Settings File!');
+        $localSettings = '...'; // Your local.settings.inc content here
+
+        $localSettingsFile = fopen("$projectPath/public_html/sites/default/local.settings.inc", "w");
+        if ($localSettingsFile) {
+            fwrite($localSettingsFile, $localSettings);
+            fclose($localSettingsFile);
+            $this->output->writeln('Local Settings File Created Successfully!');
+        } else {
+            $this->output->writeln('<fg=red>Failed to create local settings file</>');
+        }
     }
-    catch (\Throwable $th) {
-      $this->output->writeln($th->getMessage());
-      return FALSE;
-    }
-  }
 
 }
