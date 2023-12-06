@@ -15,21 +15,33 @@ seeds-installer command is a Symfony console application that simplifies the pro
     ```bash
     composer global require sprintive/seeds-installer
     ```
+2. In your terminal write this command : 
+```
+    composer -n config --global home  
+```
 
-2. If you have zsh on your device:
+you will get some thing like this : 
+```
+/home/<user>/.config/composer
+```
+or
+```
+/home/<user>/.composer
+```
+3. If you have zsh on your device:
     In your terminal go write `vim ~/.zshrc`, then add in the last line this code :
 
     ```
-     export COMPOSER_BIN="$HOME/.config/composer/bin"
+     export PATH="$PATH:$HOME/.composer/vendor/bin"
     ```
 
     If you have `bashrc` on your device
     in your terminal go write `vim ~/.bashrc`, then add in the last line this code
 
     ```
-    export COMPOSER_BIN="$HOME/.config/composer/bin"
+    export PATH="$PATH:$HOME/.composer/vendor/bin"
     ```
-
+    ** this path `export PATH="$PATH:$HOME/.composer/vendor/bin"` is related to point 2 ( change the path to match with the result you get)
 ## Usage
 
 To clone a new project, use the following command:
