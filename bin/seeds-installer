@@ -39,5 +39,5 @@ if (file_exists(__DIR__.'/../../../autoload.php')) {
 }
 
 $app = new Symfony\Component\Console\Application('Sprintive project installer', '1.0.02');
-$app->add(new Sprintive\Project);
+$app->add(new Sprintive\CloneProject);
 $app->run();
