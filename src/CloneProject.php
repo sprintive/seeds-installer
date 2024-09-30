@@ -256,9 +256,6 @@ class CloneProject extends Command {
     $progressIndicator = new ProgressIndicator($this->output, 'verbose', 100, ['⠏', '⠛', '⠹', '⢸', '⣰', '⣤', '⣆', '⡇']);
     $progressIndicator->start('Processing...' . PHP_EOL . PHP_EOL);
     $i = 0;
-    if ((new Filesystem())->exists($this->projectInfo['project_path'])) {
-      return;
-    }
     $checkRepoExists = $this->runCommands(["git ls-remote $githubRepo"], '.');
     if ($checkRepoExists->getExitCode() !== 0) {
       $progressIndicator->finish('Finished');
@@ -294,7 +291,7 @@ class CloneProject extends Command {
    *
    * @return \Symfony\Component\Process\Process
    */
-  protected function runCommands($commands, string $workingPath = NULL, ?array $env = []) {
+  protected function runCommands($commands, ?string $workingPath = NULL, ?array $env = []) {
     if (!$this->output->isDecorated()) {
       $commands = array_map(function ($value) {
         if (str_starts_with($value, 'chmod')) {
@@ -446,12 +443,11 @@ class CloneProject extends Command {
   private function createLocalSettingsFile() {
     $projectPath = $this->projectInfo['project_path'];
     $this->output->writeln('Create Local Settings File!');
-    // get stubs from stubs folder
-    // check if project has local.settings.inc
+    // Get stubs from stubs folder
+    // check if project has local.settings.inc.
     if ((new Filesystem())->exists("$projectPath/public_html/sites/default/local.settings.inc")) {
       return;
     }
-
 
     $localSettingsFilePath = (new Filesystem)->dirname(__DIR__);
     $localSettingsStubs = file_get_contents($localSettingsFilePath . "/stubs/local.settings.inc.stub");
